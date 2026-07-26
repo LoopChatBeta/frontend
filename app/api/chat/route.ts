@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 
+const backendUrl =
+  process.env.BACKEND_URL?.replace(/\/$/, '');
+
 export async function POST(req: Request) {
   const body = await req.json();
 
   const response = await fetch(
-    `${process.env.BACKEND_URL}/chat`,
+    `${backendUrl}/chat`,
     {
       method: 'POST',
       headers: {
