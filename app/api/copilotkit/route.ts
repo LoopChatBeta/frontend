@@ -16,7 +16,11 @@ const runtime = new CopilotRuntime();
 export const POST = async (req: NextRequest) => {
   const { handleRequest } = copilotRuntimeNextJSAppRouterEndpoint({
     runtime,
-    serviceAdapter: new OpenAIAdapter({ openai: dashscope, model: "qwen-max" }),
+    serviceAdapter: new OpenAIAdapter({
+      openai: dashscope,
+      model: "qwen-plus",
+      disableParallelToolCalls: true,
+    }),
     endpoint: "/api/copilotkit",
   });
 
