@@ -13,8 +13,10 @@ export default function Home() {
   const [clinicContext, setClinicContext] = useState("");
 
   useCopilotReadable({
-    description: "Clinic website knowledge base — use this to answer patient questions accurately",
-    value: clinicContext || "No clinic website has been loaded yet.",
+    description: "Clinic website knowledge base — use this to answer patient questions accurately. IMPORTANT: Always use this information when answering. Do not say no information is loaded if this content is present.",
+    value: clinicContext
+      ? `LOADED CLINIC CONTENT:\n\n${clinicContext}`
+      : "No clinic website has been loaded yet.",
   });
 
   const handleIngest = async () => {
@@ -34,14 +36,18 @@ export default function Home() {
       if (data.success) {
         setStatus(`✅ Loaded ${data.chunks} chunks from the site`);
         setClinicLoaded(true);
-        // Fetch initial context to prime the readable
-        const searchRes = await fetch("/api/search", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ query: "clinic services insurance appointment" }),
-        });
-        const searchData = await searchRes.json();
-        setClinicContext(searchData.context || "");
+        setClinicContext(data.context || "");
+        console.log("Context set:", data.context?.slice(0, 200));
+
+        // // Fetch initial context to prime the readable
+        // const searchRes = await fetch("/api/search", {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify({ query: "clinic services insurance appointment" }),
+        // });
+        // const searchData = await searchRes.json();
+        // console.log("Context set:", searchData.context?.slice(0, 200));
+        // setClinicContext(searchData.context || "");
       } else {
         setStatus(`❌ Error: ${data.error}`);
       }

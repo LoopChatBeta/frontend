@@ -61,10 +61,14 @@ export async function POST(req: NextRequest) {
 
     console.log(`Ingested ${docs.length} chunks from ${url}`);
 
+    // Return the top chunks directly so frontend doesn't need a second call
+    const topChunks = docs.slice(0, 10).map((d) => d.pageContent).join("\n\n");
+
     return NextResponse.json({
       success: true,
       chunks: docs.length,
       message: `Successfully ingested ${docs.length} chunks`,
+      context: topChunks,
     });
 
   } catch (error) {
