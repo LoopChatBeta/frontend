@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint",
+    "test": "jest"
   },
   "dependencies": {
-    "@copilotkit/react-core": "^1.66.2",
-    "@copilotkit/react-ui": "^1.66.2",
-    "@copilotkit/runtime": "^1.66.2",
+    "@copilotkit/react-core": "1.50.0-beta.19",
+    "@copilotkit/react-ui": "1.50.0-beta.19",
+    "@copilotkit/runtime": "1.50.0-beta.19",
     "@langchain/classic": "^1.0.40",
     "@langchain/community": "^1.1.29",
     "@langchain/core": "^1.2.4",
@@ -26,12 +27,16 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "jest": "^30.4.2",
     "tailwindcss": "^4",
+    "ts-jest": "^29.4.12",
+    "ts-node": "^10.9.2",
     "typescript": "^5"
   }
 }

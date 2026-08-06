@@ -1,23 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CopilotSidebar } from "@copilotkit/react-ui";
-import { useCopilotReadable } from "@copilotkit/react-core";
+import ChatWidget from "../components/ChatWidget";
+import IntakeForm, { IntakeData } from "../components/IntakeForm";
 
 export default function Home() {
-  const [url, setUrl] = useState("https://www.mayoclinic.org");
+  const [url, setUrl] = useState("");
   const [status, setStatus] = useState("");
   const [isIngesting, setIsIngesting] = useState(false);
   const [clinicLoaded, setClinicLoaded] = useState(false);
-
   const [clinicContext, setClinicContext] = useState("");
-
-  useCopilotReadable({
-    description: "Clinic website knowledge base — use this to answer patient questions accurately. IMPORTANT: Always use this information when answering. Do not say no information is loaded if this content is present.",
-    value: clinicContext
-      ? `LOADED CLINIC CONTENT:\n\n${clinicContext}`
-      : "No clinic website has been loaded yet.",
-  });
+  const [showIntakeForm, setShowIntakeForm] = useState(false);
+  const [leadSaved, setLeadSaved] = useState(false);
 
   const handleIngest = async () => {
     if (!url) return;
@@ -37,17 +31,6 @@ export default function Home() {
         setStatus(`✅ Loaded ${data.chunks} chunks from the site`);
         setClinicLoaded(true);
         setClinicContext(data.context || "");
-        console.log("Context set:", data.context?.slice(0, 200));
-
-        // // Fetch initial context to prime the readable
-        // const searchRes = await fetch("/api/search", {
-        //   method: "POST",
-        //   headers: { "Content-Type": "application/json" },
-        //   body: JSON.stringify({ query: "clinic services insurance appointment" }),
-        // });
-        // const searchData = await searchRes.json();
-        // console.log("Context set:", searchData.context?.slice(0, 200));
-        // setClinicContext(searchData.context || "");
       } else {
         setStatus(`❌ Error: ${data.error}`);
       }
@@ -56,6 +39,13 @@ export default function Home() {
     } finally {
       setIsIngesting(false);
     }
+  };
+
+  const handleIntakeSubmit = async (data: IntakeData) => {
+    console.log("Intake submitted:", data);
+    // Step 3 — save to NeonDB goes here
+    setShowIntakeForm(false);
+    setLeadSaved(true);
   };
 
   return (
@@ -86,19 +76,26 @@ export default function Home() {
         {status && (
           <p className="text-sm mt-2 text-gray-600">{status}</p>
         )}
+        {leadSaved && (
+          <p className="text-sm mt-2 text-green-600">
+            ✅ Your information has been saved. We'll follow up shortly!
+          </p>
+        )}
       </div>
 
-      <CopilotSidebar
-        defaultOpen={true}
-        instructions={`You are LoopChat, an AI assistant for healthcare clinic patients. 
-        ${clinicLoaded ? `You have been loaded with information from ${url}. Use this knowledge to answer patient questions accurately.` : "No clinic website has been loaded yet. Ask the clinic to load their website first."}
-        Be empathetic, clear, and professional.`}
-        labels={{
-          title: "LoopChat Patient Assistant",
-          initial: clinicLoaded
-            ? `Hi! I'm ready to answer questions about this clinic. How can I help you?`
-            : "Hi! I'm your LoopChat assistant. How can I help you today?",
-        }}
+      {/* Intake Form Modal */}
+      {showIntakeForm && (
+        <IntakeForm
+          onSubmit={handleIntakeSubmit}
+          onClose={() => setShowIntakeForm(false)}
+        />
+      )}
+
+      {/* Chat Widget */}
+      <ChatWidget
+        clinicContext={clinicContext}
+        clinicUrl={clinicLoaded ? url : undefined}
+        onShowIntakeForm={() => setShowIntakeForm(true)}
       />
     </main>
   );
