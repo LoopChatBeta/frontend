@@ -10,12 +10,11 @@ export default function Home() {
   const [isIngesting, setIsIngesting] = useState(false);
   const [clinicLoaded, setClinicLoaded] = useState(false);
 
-  // Make ingestion status visible to the AI
+  const [clinicContext, setClinicContext] = useState("");
+
   useCopilotReadable({
-    description: "Whether a clinic website has been loaded",
-    value: clinicLoaded
-      ? `Clinic website loaded from ${url}`
-      : "No clinic website loaded yet",
+    description: "Clinic website knowledge base — use this to answer patient questions accurately",
+    value: clinicContext || "No clinic website has been loaded yet.",
   });
 
   const handleIngest = async () => {
@@ -35,6 +34,14 @@ export default function Home() {
       if (data.success) {
         setStatus(`✅ Loaded ${data.chunks} chunks from the site`);
         setClinicLoaded(true);
+        // Fetch initial context to prime the readable
+        const searchRes = await fetch("/api/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: "clinic services insurance appointment" }),
+        });
+        const searchData = await searchRes.json();
+        setClinicContext(searchData.context || "");
       } else {
         setStatus(`❌ Error: ${data.error}`);
       }

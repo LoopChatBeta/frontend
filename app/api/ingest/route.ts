@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       apiKey: process.env.DASHSCOPE_API_KEY!,
       configuration: {
         baseURL: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
-      },
+      },  
       model: "text-embedding-v3",
       batchSize: 10,
     });
