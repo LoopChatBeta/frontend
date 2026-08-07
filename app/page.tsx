@@ -42,32 +42,52 @@ export default function Home() {
   };
 
   const handleIntakeSubmit = async (data: IntakeData) => {
-    try {
-      const response = await fetch("/api/leads", {
+  try {
+    // Save lead to NeonDB
+    const leadResponse = await fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        reason: data.reason,
+        insurance: data.insurance,
+        clinicUrl: url,
+        transcript: null,
+      }),
+    });
+
+    const leadResult = await leadResponse.json();
+
+    if (leadResult.success) {
+      // Send personalized follow-up email
+      const emailResponse = await fetch("/api/email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
           email: data.email,
-          phone: data.phone,
           reason: data.reason,
           insurance: data.insurance,
           clinicUrl: url,
-          transcript: null,
         }),
       });
 
-      const result = await response.json();
+      const emailResult = await emailResponse.json();
 
-      if (result.success) {
-        setShowIntakeForm(false);
-        setLeadSaved(true);
-      } else {
-        console.error("Failed to save lead:", result.error);
+      if (emailResult.success) {
+        console.log("Follow-up email sent:", emailResult.emailId);
       }
-    } catch (error) {
-      console.error("Lead submission error:", error);
+
+      setShowIntakeForm(false);
+      setLeadSaved(true);
+    } else {
+      console.error("Failed to save lead:", leadResult.error);
     }
+  } catch (error) {
+    console.error("Intake submission error:", error);
+  }
   };
 
   return (
