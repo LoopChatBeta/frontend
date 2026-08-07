@@ -42,10 +42,32 @@ export default function Home() {
   };
 
   const handleIntakeSubmit = async (data: IntakeData) => {
-    console.log("Intake submitted:", data);
-    // Step 3 — save to NeonDB goes here
-    setShowIntakeForm(false);
-    setLeadSaved(true);
+    try {
+      const response = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          reason: data.reason,
+          insurance: data.insurance,
+          clinicUrl: url,
+          transcript: null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setShowIntakeForm(false);
+        setLeadSaved(true);
+      } else {
+        console.error("Failed to save lead:", result.error);
+      }
+    } catch (error) {
+      console.error("Lead submission error:", error);
+    }
   };
 
   return (
@@ -78,7 +100,7 @@ export default function Home() {
         )}
         {leadSaved && (
           <p className="text-sm mt-2 text-green-600">
-            ✅ Your information has been saved. We'll follow up shortly!
+            ✅ Your information has been saved. We will follow up shortly!
           </p>
         )}
       </div>
