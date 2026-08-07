@@ -1,36 +1,168 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LoopChat Frontend
 
-## Getting Started
+LoopChat is a Next.js app for AI-powered patient engagement.
+It lets a clinic ingest its public website content, answer patient questions in chat, and collect lead details when patients request appointments or follow-up.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Website ingestion from a clinic URL using Firecrawl
+- Context chunking and embeddings for retrieval
+- Chat assistant powered by DashScope-compatible OpenAI API
+- Intent-driven intake form trigger from assistant responses
+- Lead capture and persistence with Drizzle + Neon/Postgres
+- Embeddable chat launcher script for third-party websites
+
+## Tech Stack
+
+- Next.js (App Router), React, TypeScript
+- Tailwind CSS
+- LangChain
+- OpenAI SDK (DashScope-compatible endpoint)
+- Firecrawl
+- Drizzle ORM with Neon serverless Postgres
+- Jest
+
+## Project Flow
+
+1. A clinic URL is submitted in the app.
+2. The backend crawls the site and converts content into markdown.
+3. Content is split into chunks and embedded into an in-memory vector store.
+4. Chat requests include clinic context so answers are clinic-specific.
+5. If the assistant includes the trigger token SHOW_INTAKE_FORM, the UI opens intake.
+6. Intake submission stores lead data in Postgres.
+
+## Prerequisites
+
+- Node.js 18+ (Node.js 20 recommended)
+- pnpm (recommended), npm, yarn, or bun
+- A Postgres database URL (Neon works well)
+
+## Environment Variables
+
+Create `.env.local` with:
+
+```env
+DASHSCOPE_API_KEY=your_dashscope_key
+FIRECRAWL_API_KEY=your_firecrawl_key
+DATABASE_URL=your_postgres_connection_string
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Notes:
+- DASHSCOPE_API_KEY is used for chat and embeddings.
+- FIRECRAWL_API_KEY is used for website crawling.
+- DATABASE_URL is used for lead storage through Drizzle.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Install and Run
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Install dependencies:
 
-## Learn More
+```bash
+pnpm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+Start development server:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm dev
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Build for production:
 
-## Deploy on Vercel
+```bash
+pnpm build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Start production server:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+pnpm start
+```
+
+Run tests:
+
+```bash
+pnpm test
+```
+
+Run lint:
+
+```bash
+pnpm lint
+```
+
+Open [http://localhost:3000](http://localhost:3000)
+
+## API Endpoints
+
+### `POST /api/ingest`
+- Body: `url`
+- Action: Crawls site, chunks content, creates embeddings, stores vector data in memory
+- Response: success flag, chunk count, and top context text
+
+### `POST /api/search`
+- Body: `query`
+- Action: Similarity search against in-memory vector store
+- Response: context text from top matches
+
+### `POST /api/chat`
+- Body: `conversation_id`, `message`, `clinicContext`
+- Action: Sends chat history to model and returns assistant reply
+- Response: `reply` and `showIntakeForm` boolean
+
+### `POST /api/leads`
+- Body: `name`, `email`, `phone`, `reason`, `insurance`, `clinicUrl`, `transcript`
+- Action: Validates and stores intake lead in database
+- Response: success flag and saved lead
+
+### `POST /api/copilotkit`
+- Action: CopilotKit runtime endpoint using DashScope-compatible adapter
+
+## Database
+
+Current schema stores leads with:
+- name, email, phone
+- reason, insurance
+- clinicUrl, transcript
+- createdAt
+
+If you manage migrations with Drizzle, ensure your database schema is created before testing lead submission.
+
+## Embedding the Widget
+
+An embeddable loader script is available under `public/embed`.
+It creates a floating Chat button and toggles an iframe chat panel.
+
+Before production:
+- Update the iframe source URL to your deployed frontend domain
+- Pass client_id from the host site script tag as needed
+
+## Testing
+
+Current tests include smoke coverage for:
+- chat response shape
+- intake trigger token handling
+- basic ingestion URL validation
+- intake required field validation
+
+Recommended next tests:
+- API route integration tests for chat, ingest, and leads
+- Error-path tests for missing environment variables
+- Database write/read integration tests
+
+## Known Limitations
+
+- Conversation history is stored in process memory (not durable).
+- Vector store is in memory (resets on restart/deploy).
+- In-memory approach is suitable for demos/hackathons, not production scale.
+
+## Production Hardening Suggestions
+
+- Replace in-memory vector store with a persistent vector database.
+- Persist conversations in a durable store.
+- Add auth, rate limiting, and abuse protection for public endpoints.
+- Add structured logging and monitoring.
+- Add validation schemas and stronger input sanitization across endpoints.
+
+## License
+
+Private/internal project unless otherwise specified.
