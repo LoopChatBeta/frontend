@@ -1,6 +1,11 @@
 // app/api/insurance/request/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+import { AlibabaSandbox } from "../../../../backend/services/AlibabaSandbox";
+import { LocalSandbox } from "../../../../backend/services/LocalSandbox";
+const sandboxService = new LocalSandbox();
+
+// const sandboxService = new AlibabaSandbox();
 
 interface InsuranceRequest {
   intakeId?: string;
@@ -16,58 +21,48 @@ export async function POST(req: NextRequest) {
   try {
     const body: InsuranceRequest = await req.json();
 
-    // Minimal validation
     if (!body.patientId) {
       return NextResponse.json(
-        {
-          success: false,
-          error: "patientId is required."
-        },
+        { success: false, error: "patientId is required." },
         { status: 400 }
       );
     }
 
-    // ------------------------------------------------------------------
-    // TODO (Hackathon Day 3)
-    //
-    // Replace this mock implementation with:
-    //
-    // const sandbox = await sandboxService.create();
-    // await sandbox.pause();
-    //
-    // Return the real sandboxId.
-    // ------------------------------------------------------------------
+    // Step 1 — create sandbox
+    console.log(`[Insurance] Creating sandbox for patient: ${body.patientId}`);
+    const state = await sandboxService.create(body.patientId);
 
-    const sandboxId = `sandbox-${Date.now()}`;
-    const requestId = `pa-${Date.now()}`;
+    // Step 2 — save checkpoint with all workflow context
+    const checkpoint = {
+      patientId: body.patientId,
+      intakeId: body.intakeId ?? null,
+      insurance: body.insurance ?? null,
+      provider: body.provider ?? null,
+      doctorId: body.doctorId ?? null,
+      appointmentDate: body.appointmentDate ?? null,
+      procedureCode: body.procedureCode ?? null,
+      submittedAt: new Date().toISOString(),
+    };
+
+    // Step 3 — hibernate sandbox while waiting for insurance
+    console.log(`[Insurance] Hibernating sandbox: ${state.sandboxId}`);
+    await sandboxService.pause(state.sandboxId, checkpoint);
 
     return NextResponse.json({
       success: true,
-
       status: "HIBERNATING",
-
-      requestId,
-
-      sandboxId,
-
-      message:
-        "Prior authorization submitted. Waiting for insurance approval.",
-
+      sandboxId: state.sandboxId,
+      requestId: `pa-${Date.now()}`,
+      message: "Prior authorization submitted. Waiting for insurance approval.",
       estimatedWait: "30 seconds (demo)",
-
       nextStep: "webhook",
-
-      mock: true
+      mock: false,
     });
 
   } catch (err) {
-    console.error(err);
-
+    console.error("[Insurance] Error:", err);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Invalid request."
-      },
+      { success: false, error: "Invalid request." },
       { status: 500 }
     );
   }
