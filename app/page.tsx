@@ -5,13 +5,14 @@ import ChatWidget from "../components/ChatWidget";
 import IntakeForm, { IntakeData } from "../components/IntakeForm";
 
 export default function Home() {
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState("https://mayoclinic.org");
   const [status, setStatus] = useState("");
   const [isIngesting, setIsIngesting] = useState(false);
   const [clinicLoaded, setClinicLoaded] = useState(false);
   const [clinicContext, setClinicContext] = useState("");
   const [showIntakeForm, setShowIntakeForm] = useState(false);
   const [leadSaved, setLeadSaved] = useState(false);
+  const [lastIntakeData, setLastIntakeData] = useState<IntakeData | null>(null); // ← ADD THIS
 
   const handleIngest = async () => {
     if (!url) return;
@@ -42,52 +43,50 @@ export default function Home() {
   };
 
   const handleIntakeSubmit = async (data: IntakeData) => {
-  try {
-    // Save lead to NeonDB
-    const leadResponse = await fetch("/api/leads", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: data.name,
-        email: data.email,
-        phone: data.phone,
-        reason: data.reason,
-        insurance: data.insurance,
-        clinicUrl: url,
-        transcript: null,
-      }),
-    });
-
-    const leadResult = await leadResponse.json();
-
-    if (leadResult.success) {
-      // Send personalized follow-up email
-      const emailResponse = await fetch("/api/email", {
+    setLastIntakeData(data); // ← ADD THIS
+    try {
+      const leadResponse = await fetch("/api/leads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: data.name,
           email: data.email,
+          phone: data.phone,
           reason: data.reason,
           insurance: data.insurance,
           clinicUrl: url,
+          transcript: null,
         }),
       });
 
-      const emailResult = await emailResponse.json();
+      const leadResult = await leadResponse.json();
 
-      if (emailResult.success) {
-        console.log("Follow-up email sent:", emailResult.emailId);
+      if (leadResult.success) {
+        const emailResponse = await fetch("/api/email", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: data.name,
+            email: data.email,
+            reason: data.reason,
+            insurance: data.insurance,
+            clinicUrl: url,
+          }),
+        });
+
+        const emailResult = await emailResponse.json();
+        if (emailResult.success) {
+          console.log("Follow-up email sent:", emailResult.emailId);
+        }
+
+        setShowIntakeForm(false);
+        setLeadSaved(true);
+      } else {
+        console.error("Failed to save lead:", leadResult.error);
       }
-
-      setShowIntakeForm(false);
-      setLeadSaved(true);
-    } else {
-      console.error("Failed to save lead:", leadResult.error);
+    } catch (error) {
+      console.error("Intake submission error:", error);
     }
-  } catch (error) {
-    console.error("Intake submission error:", error);
-  }
   };
 
   return (
@@ -138,6 +137,7 @@ export default function Home() {
         clinicContext={clinicContext}
         clinicUrl={clinicLoaded ? url : undefined}
         onShowIntakeForm={() => setShowIntakeForm(true)}
+        intakeData={leadSaved ? lastIntakeData : null} // ← ADD THIS
       />
     </main>
   );
