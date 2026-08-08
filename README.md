@@ -45,12 +45,14 @@ Create `.env.local` with:
 DASHSCOPE_API_KEY=your_dashscope_key
 FIRECRAWL_API_KEY=your_firecrawl_key
 DATABASE_URL=your_postgres_connection_string
+SANDBOX_PROVIDER=alibaba
 ```
 
 Notes:
 - DASHSCOPE_API_KEY is used for chat and embeddings.
 - FIRECRAWL_API_KEY is used for website crawling.
 - DATABASE_URL is used for lead storage through Drizzle.
+- SANDBOX_PROVIDER selects sandbox implementation. Use `alibaba` (default) or `local`.
 
 ## Install and Run
 

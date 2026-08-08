@@ -1,11 +1,9 @@
 // app/api/insurance/request/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { AlibabaSandbox } from "../../../../backend/services/AlibabaSandbox";
-import { LocalSandbox } from "../../../../backend/services/LocalSandbox";
-const sandboxService = new LocalSandbox();
+import { getSandboxService } from "../../../../backend/services/getSandboxService";
 
-// const sandboxService = new AlibabaSandbox();
+const sandboxService = getSandboxService();
 
 interface InsuranceRequest {
   intakeId?: string;

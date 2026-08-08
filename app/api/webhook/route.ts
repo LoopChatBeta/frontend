@@ -1,12 +1,10 @@
 // app/api/webhook/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { AlibabaSandbox } from "../../../backend/services/AlibabaSandbox";
+import { getSandboxService } from "../../../backend/services/getSandboxService";
 import { Resend } from "resend";
 
-import { LocalSandbox } from "../../../backend/services/LocalSandbox";
-const sandboxService = new LocalSandbox();
-// const sandboxService = new AlibabaSandbox();
+const sandboxService = getSandboxService();
 const resend = new Resend(process.env.RESEND_API_KEY!);
 
 interface InsuranceWebhookRequest {
