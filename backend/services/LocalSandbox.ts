@@ -21,7 +21,7 @@ export class LocalSandbox implements SandboxService {
     };
 
     sandboxStore.set(sandboxId, state);
-    console.log(`TraceID: ${traceId}] [LocalSandbox] Created: ${sandboxId} for patient: ${patientId}`);
+    console.log(`[TraceID: ${traceId}] [LocalSandbox] Created: ${sandboxId} for patient: ${patientId}`);
 
     return state;
   }
