@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSandboxService } from "../../../../backend/services/getSandboxService";
+import { getTraceId, logTrace } from "@/backend/utils/trace";
 
 const sandboxService = getSandboxService();
 
@@ -16,6 +17,8 @@ interface InsuranceRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const traceId = getTraceId(req);
+
   try {
     const body: InsuranceRequest = await req.json();
 
@@ -28,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     // Step 1 — create sandbox
     console.log(`[Insurance] Creating sandbox for patient: ${body.patientId}`);
-    const state = await sandboxService.create(body.patientId);
+    const state = await sandboxService.create(body.patientId, traceId);
 
     // Step 2 — save checkpoint with all workflow context
     const checkpoint = {
@@ -55,6 +58,10 @@ export async function POST(req: NextRequest) {
       estimatedWait: "30 seconds (demo)",
       nextStep: "webhook",
       mock: false,
+    }, {
+        headers: {
+          "x-sls-trace-id": traceId,
+        },
     });
 
   } catch (err) {

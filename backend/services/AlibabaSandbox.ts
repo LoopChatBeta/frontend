@@ -10,7 +10,7 @@ const sandboxStore = new Map<string, SandboxState>();
 const e2bSandboxes = new Map<string, Sandbox>();
 
 export class AlibabaSandbox implements SandboxService {
-  async create(patientId: string): Promise<SandboxState> {
+  async create(patientId: string, traceId: string): Promise<SandboxState> {
     console.log(`[AlibabaSandbox] Creating sandbox for patient: ${patientId}`);
 
     const sbx = await Sandbox.create({
@@ -22,6 +22,7 @@ export class AlibabaSandbox implements SandboxService {
     const state: SandboxState = {
       sandboxId: sbx.sandboxId,
       patientId,
+      traceId,
       status: "RUNNING",
       checkpoint: {},
       createdAt: new Date(),

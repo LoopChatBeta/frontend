@@ -8,19 +8,20 @@ import type { SandboxService, SandboxState } from "./SandboxService";
 const sandboxStore = new Map<string, SandboxState>();
 
 export class LocalSandbox implements SandboxService {
-  async create(patientId: string): Promise<SandboxState> {
+  async create(patientId: string, traceId: string): Promise<SandboxState> {
     const sandboxId = `local-sbx-${Date.now()}`;
 
     const state: SandboxState = {
       sandboxId,
       patientId,
+      traceId,
       status: "RUNNING",
       checkpoint: {},
       createdAt: new Date(),
     };
 
     sandboxStore.set(sandboxId, state);
-    console.log(`[LocalSandbox] Created: ${sandboxId} for patient: ${patientId}`);
+    console.log(`TraceID: ${traceId}] [LocalSandbox] Created: ${sandboxId} for patient: ${patientId}`);
 
     return state;
   }

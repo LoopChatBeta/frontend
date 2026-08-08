@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSandboxService } from "../../../backend/services/getSandboxService";
 import { Resend } from "resend";
+import { getTraceId, logTrace } from "@/backend/utils/trace";
 
 const sandboxService = getSandboxService();
 const resend = new Resend(process.env.RESEND_API_KEY!);
@@ -16,6 +17,8 @@ interface InsuranceWebhookRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const traceId = getTraceId(req);
+
   try {
     const body: InsuranceWebhookRequest = await req.json();
 
@@ -80,6 +83,10 @@ The LoopChat Team`,
         ? "Sandbox resumed successfully. Appointment confirmed."
         : "Insurance request denied.",
       mock: false,
+    }, {
+        headers: {
+          "x-sls-trace-id": traceId,
+        }
     });
 
   } catch (err) {
