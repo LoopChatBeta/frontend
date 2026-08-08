@@ -10,31 +10,30 @@ const sandboxStore = new Map<string, SandboxState>();
 const e2bSandboxes = new Map<string, Sandbox>();
 
 export class AlibabaSandbox implements SandboxService {
-  async create(patientId: string, traceId: string): Promise<SandboxState> {
-    console.log(`[AlibabaSandbox] Creating sandbox for patient: ${patientId}`);
+async create(patientId: string, traceId: string): Promise<SandboxState> {
+  console.log(`[AlibabaSandbox] Creating sandbox for patient: ${patientId} TraceID: ${traceId}`);
 
-    const sbx = await Sandbox.create({
-      apiKey: process.env.E2B_API_KEY,
-      domain: process.env.E2B_DOMAIN,
-      timeoutMs: 300_000,
-    });
+  const sbx = await Sandbox.create({
+    apiKey: process.env.E2B_API_KEY,
+    domain: process.env.E2B_DOMAIN,
+    timeoutMs: 300_000,
+  });
 
-    const state: SandboxState = {
-      sandboxId: sbx.sandboxId,
-      patientId,
-      traceId,
-      status: "RUNNING",
-      checkpoint: {},
-      createdAt: new Date(),
-    };
+  const state: SandboxState = {
+    sandboxId: sbx.sandboxId,
+    patientId,
+    traceId,
+    status: "RUNNING",
+    checkpoint: {},
+    createdAt: new Date(),
+  };
 
-    // Store both state and E2B sandbox reference
-    sandboxStore.set(sbx.sandboxId, state);
-    e2bSandboxes.set(sbx.sandboxId, sbx);
+  sandboxStore.set(sbx.sandboxId, state);
+  e2bSandboxes.set(sbx.sandboxId, sbx);
 
-    console.log(`[AlibabaSandbox] Created: ${sbx.sandboxId}`);
-    return state;
-  }
+  console.log(`[AlibabaSandbox] Created: ${sbx.sandboxId}`);
+  return state;
+}
 
   async pause(
     sandboxId: string,

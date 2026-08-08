@@ -2,8 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSandboxService } from "../../../backend/services/getSandboxService";
-import { Resend } from "resend";
 import { getTraceId, logTrace } from "@/backend/utils/trace";
+import { Resend } from "resend";
 
 const sandboxService = getSandboxService();
 const resend = new Resend(process.env.RESEND_API_KEY!);
@@ -32,10 +32,9 @@ export async function POST(req: NextRequest) {
     const approved = body.status !== "DENIED";
 
     // Step 1 — resume sandbox from hibernation
-    console.log(`[Webhook] Resuming sandbox: ${body.sandboxId}`);
+    logTrace(traceId, `Webhook received — resuming sandbox: ${body.sandboxId}`);
     const state = await sandboxService.resume(body.sandboxId);
-
-    console.log(`[Webhook] Checkpoint restored:`, state.checkpoint);
+    logTrace(traceId, "Sandbox resumed — checkpoint restored", state.checkpoint);
 
     // Step 2 — generate appointment confirmation
     const appointment = approved
@@ -47,12 +46,12 @@ export async function POST(req: NextRequest) {
         }
       : null;
 
-    // Step 3 — queue confirmation email if approved
-    if (approved && state.checkpoint.patientId) {
-      console.log(`[Webhook] Sending confirmation email...`);
+    // Step 3 — send confirmation email if approved
+    if (approved && body.patientId) {
+      logTrace(traceId, "Sending confirmation email...");
       await resend.emails.send({
         from: "LoopChat <onboarding@resend.dev>",
-        to: state.checkpoint.patientId as string,
+        to: body.patientId,
         subject: "Your appointment is confirmed!",
         text: `Great news! Your prior authorization has been approved.
 
@@ -60,15 +59,17 @@ Your appointment with Dr. Chen is confirmed for ${appointment?.date} at ${appoin
 
 Authorization Number: ${appointment?.authorizationNumber}
 
-We look forward to seeing you. Please bring your insurance card and a valid photo ID.
+Please bring your insurance card and a valid photo ID.
 
 Warm regards,
 The LoopChat Team`,
       });
+      logTrace(traceId, "Confirmation email sent");
     }
 
-    // Step 4 — destroy sandbox after workflow complete
+    // Step 4 — destroy sandbox
     await sandboxService.destroy(body.sandboxId);
+    logTrace(traceId, `Sandbox destroyed: ${body.sandboxId}`);
 
     return NextResponse.json({
       success: true,
@@ -80,17 +81,17 @@ The LoopChat Team`,
       appointment,
       emailQueued: approved,
       message: approved
-        ? "Sandbox resumed successfully. Appointment confirmed."
+        ? "Sandbox resumed. Appointment confirmed."
         : "Insurance request denied.",
       mock: false,
     }, {
-        headers: {
-          "x-sls-trace-id": traceId,
-        }
+      headers: {
+        "x-sls-trace-id": traceId,
+      },
     });
 
   } catch (err) {
-    console.error("[Webhook] Error:", err);
+    console.error(`[TraceID: ${traceId}] [Webhook] Error:`, err);
     return NextResponse.json(
       { success: false, error: "Invalid webhook payload." },
       { status: 500 }

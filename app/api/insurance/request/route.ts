@@ -2,9 +2,42 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSandboxService } from "../../../../backend/services/getSandboxService";
-import { getTraceId, logTrace } from "@/backend/utils/trace";
+import { getTraceId } from "@/backend/utils/trace";
 
 const sandboxService = getSandboxService();
+
+// Mock EligibilityService — replace with Don's implementation once pushed
+function checkEligibility(patientId: string, insurance: string) {
+  return {
+    eligible: true,
+    patientId,
+    insurance,
+    copay: 30,
+    deductible: 250,
+    deductibleMet: true,
+    coverageType: "PPO",
+    notes: `${insurance} covers specialist visits with $30 copay.`,
+  };
+}
+
+// Mock CostEstimator — replace with Don's implementation once pushed
+function calculateEstimate(cptCodes: string[]) {
+  const cptMap: Record<string, { description: string; cost: number }> = {
+    "99203": { description: "Office Visit — New Patient", cost: 30 },
+    "73560": { description: "Knee X-Ray (2 views)", cost: 25 },
+    "99213": { description: "Office Visit — Established Patient", cost: 20 },
+    "93000": { description: "ECG with interpretation", cost: 15 },
+  };
+
+  const breakdown = cptCodes.map((code) => ({
+    code,
+    description: cptMap[code]?.description ?? "Medical Service",
+    cost: cptMap[code]?.cost ?? 20,
+  }));
+
+  const total = breakdown.reduce((sum, item) => sum + item.cost, 0);
+  return { total, breakdown };
+}
 
 interface InsuranceRequest {
   intakeId?: string;
@@ -14,6 +47,7 @@ interface InsuranceRequest {
   doctorId?: string;
   appointmentDate?: string;
   procedureCode?: string;
+  cptCodes?: string[];
 }
 
 export async function POST(req: NextRequest) {
@@ -22,6 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     const body: InsuranceRequest = await req.json();
 
+    // Input validation — OWASP A03
     if (!body.patientId) {
       return NextResponse.json(
         { success: false, error: "patientId is required." },
@@ -29,11 +64,34 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Step 1 — create sandbox
-    console.log(`[Insurance] Creating sandbox for patient: ${body.patientId}`);
+    console.log(`[TraceID: ${traceId}] [Insurance] Starting for patient: ${body.patientId}`);
+
+    // Step 1 — check eligibility
+    const eligibility = checkEligibility(
+      body.patientId,
+      body.insurance ?? "Unknown"
+    );
+
+    if (!eligibility.eligible) {
+      return NextResponse.json(
+        { success: false, error: "Patient is not eligible for coverage.", eligibility },
+        { status: 400 }
+      );
+    }
+
+    console.log(`[TraceID: ${traceId}] [Insurance] Eligibility confirmed — Copay: $${eligibility.copay}`);
+
+    // Step 2 — calculate cost estimate
+    const cptCodes = body.cptCodes ?? ["99203", "73560"];
+    const costEstimate = calculateEstimate(cptCodes);
+
+    console.log(`[TraceID: ${traceId}] [Insurance] Cost estimate: $${costEstimate.total}`);
+
+    // Step 3 — create sandbox
+    console.log(`[TraceID: ${traceId}] [Insurance] Creating sandbox`);
     const state = await sandboxService.create(body.patientId, traceId);
 
-    // Step 2 — save checkpoint with all workflow context
+    // Step 4 — save checkpoint with full workflow context
     const checkpoint = {
       patientId: body.patientId,
       intakeId: body.intakeId ?? null,
@@ -42,11 +100,13 @@ export async function POST(req: NextRequest) {
       doctorId: body.doctorId ?? null,
       appointmentDate: body.appointmentDate ?? null,
       procedureCode: body.procedureCode ?? null,
+      eligibility,
+      costEstimate,
       submittedAt: new Date().toISOString(),
     };
 
-    // Step 3 — hibernate sandbox while waiting for insurance
-    console.log(`[Insurance] Hibernating sandbox: ${state.sandboxId}`);
+    // Step 5 — hibernate sandbox
+    console.log(`[TraceID: ${traceId}] [Insurance] Hibernating sandbox: ${state.sandboxId}`);
     await sandboxService.pause(state.sandboxId, checkpoint);
 
     return NextResponse.json({
@@ -54,18 +114,20 @@ export async function POST(req: NextRequest) {
       status: "HIBERNATING",
       sandboxId: state.sandboxId,
       requestId: `pa-${Date.now()}`,
-      message: "Prior authorization submitted. Waiting for insurance approval.",
+      eligibility,
+      costEstimate,
+      message: "Eligibility confirmed. Prior authorization submitted. Waiting for insurance approval.",
       estimatedWait: "30 seconds (demo)",
       nextStep: "webhook",
       mock: false,
     }, {
-        headers: {
-          "x-sls-trace-id": traceId,
-        },
+      headers: {
+        "x-sls-trace-id": traceId,
+      },
     });
 
   } catch (err) {
-    console.error("[Insurance] Error:", err);
+    console.error(`[TraceID: ${traceId}] [Insurance] Error:`, err);
     return NextResponse.json(
       { success: false, error: "Invalid request." },
       { status: 500 }
