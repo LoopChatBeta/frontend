@@ -1,9 +1,12 @@
-// backend/services/EligibilityService.ts
-
 export interface EligibilityResult {
   eligible: boolean;
+  patientId: string;
+  insurance: string;
   copay: number;
   deductible: number;
+  deductibleMet: boolean;
+  coverageType: "PPO" | "HMO" | "EPO" | "POS";
+  notes: string;
 }
 
 export class EligibilityService {
@@ -17,14 +20,14 @@ export class EligibilityService {
     );
 
     return {
-        eligible: true,
-        patientId,
-        insurance,
-        copay: 30,
-        deductible: 250,
-        deductibleMet: true,
-        coverageType: "PPO",
-        notes: `${insurance} covers specialist visits with $30 copay.`
+      eligible: true,
+      patientId,
+      insurance,
+      copay: 30,
+      deductible: 250,
+      deductibleMet: true,
+      coverageType: "PPO",
+      notes: `${insurance} covers specialist visits with $30 copay.`,
     };
   }
 }
