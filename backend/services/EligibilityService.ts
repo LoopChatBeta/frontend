@@ -17,9 +17,14 @@ export class EligibilityService {
     );
 
     return {
-      eligible: true,
-      copay: 30,
-      deductible: 250,
+        eligible: true,
+        patientId,
+        insurance,
+        copay: 30,
+        deductible: 250,
+        deductibleMet: true,
+        coverageType: "PPO",
+        notes: `${insurance} covers specialist visits with $30 copay.`
     };
   }
 }
